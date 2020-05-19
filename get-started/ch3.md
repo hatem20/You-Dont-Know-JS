@@ -96,7 +96,10 @@ chars;
 //   "w", "o", "r", "l", "d", "!" ]
 ```
 
-A `Map` data structure uses objects as keys, associating a value (of any type) with that object. Maps have a different default iteration than seen here, in that the iteration is not just over the map's values but instead its *entries*. An *entry* is a tuple (2-element array) including both a key and a value.
+A `Map` data structure uses objects as keys, associating a value (of any type) with that object. 
+Maps have a different default iteration than seen here, 
+in that the iteration is not just over the map's values but instead its *entries*. 
+An *entry* is a tuple (2-element array) including both a key and a value.
 
 Consider:
 
@@ -149,116 +152,38 @@ Beyond just using built-in iterables, you can also ensure your own data structur
 
 ## Closure
 
-Perhaps without realizing it, almost every JS developer has made use of closure. In fact, closure is one of the most pervasive programming functionalities across a majority of languages. It might even be as important to understand as variables or loops; that's how fundamental it is.
-
-Yet it feels kind of hidden, almost magical. And it's often talked about in either very abstract or very informal terms, which does little to help us nail down exactly what it is.
-
-We need to be able to recognize where closure is used in programs, as the presence or lack of closure is sometimes the cause of bugs (or even the cause of performance issues).
-
-So let's define closure in a pragmatic and concrete way:
-
 > Closure is when a function remembers and continues to access variables from outside its scope, even when the function is executed in a different scope.
 
-We see two definitional characteristics here. First, closure is part of the nature of a function. Objects don't get closures, functions do. Second, to observe a closure, you must execute a function in a different scope than where that function was originally defined.
+We see two definitional characteristics here:
+ 
+1. Closure is part of the nature of a function. Objects don't get closures, functions do. 
+2. To observe a closure, you must execute a function in a different scope than where that function was originally defined.
 
-Consider:
-
-```js
-function greeting(msg) {
-    return function who(name) {
-        console.log(`${ msg }, ${ name }!`);
-    };
-}
-
-var hello = greeting("Hello");
-var howdy = greeting("Howdy");
-
-hello("Kyle");
-// Hello, Kyle!
-
-hello("Sarah");
-// Hello, Sarah!
-
-howdy("Grant");
-// Howdy, Grant!
-```
-
-First, the `greeting(..)` outer function is executed, creating an instance of the inner function `who(..)`; that function closes over the variable `msg`, which is the parameter from the outer scope of `greeting(..)`. When that inner function is returned, its reference is assigned to the `hello` variable in the outer scope. Then we call `greeting(..)` a second time, creating a new inner function instance, with a new closure over a new `msg`, and return that reference to be assigned to `howdy`.
-
-When the `greeting(..)` function finishes running, normally we would expect all of its variables to be garbage collected (removed from memory). We'd expect each `msg` to go away, but they don't. The reason is closure. Since the inner function instances are still alive (assigned to `hello` and `howdy`, respectively), their closures are still preserving the `msg` variables.
-
-These closures are not a snapshot of the `msg` variable's value; they are a direct link and preservation of the variable itself. That means closure can actually observe (or make!) updates to these variables over time.
-
-```js
-function counter(step = 1) {
-    var count = 0;
-    return function increaseCount(){
-        count = count + step;
-        return count;
-    };
-}
-
-var incBy1 = counter(1);
-var incBy3 = counter(3);
-
-incBy1();       // 1
-incBy1();       // 2
-
-incBy3();       // 3
-incBy3();       // 6
-incBy3();       // 9
-```
-
-Each instance of the inner `increaseCount()` function is closed over both the `count` and `step` variables from its outer `counter(..)` function's scope. `step` remains the same over time, but `count` is updated on each invocation of that inner function. Since closure is over the variables and not just snapshots of the values, these updates are preserved.
-
-Closure is most common when working with asynchronous code, such as with callbacks. Consider:
-
-```js
-function getSomeData(url) {
-    ajax(url,function onResponse(resp){
-        console.log(
-            `Response (from ${ url }): ${ resp }`
-        );
-    });
-}
-
-getSomeData("https://some.url/wherever");
-// Response (from https://some.url/wherever): ...
-```
-
-The inner function `onResponse(..)` is closed over `url`, and thus preserves and remembers it until the Ajax call returns and executes `onResponse(..)`. Even though `getSomeData(..)` finishes right away, the `url` parameter variable is kept alive in the closure for as long as needed.
-
-It's not necessary that the outer scope be a function—it usually is, but not always—just that there be at least one variable in an outer scope accessed from an inner function:
-
-```js
-for (let [idx,btn] of buttons.entries()) {
-    btn.addEventListener("click",function onClick(){
-       console.log(`Clicked on button (${ idx })!`);
-    });
-}
-```
-
-Because this loop is using `let` declarations, each iteration gets new block-scoped (aka, local) `idx` and `btn` variables;  the loop also creates a new inner `onClick(..)` function each time. That inner function closes over `idx`, preserving it for as long as the click handler is set on the `btn`. So when each button is clicked, its handler can print its associated index value, because the handler remembers its respective `idx` variable.
-
-Remember: this closure is not over the value (like `1` or `3`), but over the variable `idx` itself.
-
-Closure is one of the most prevalent and important programming patterns in any language. But that's especially true of JS; it's hard to imagine doing anything useful without leveraging closure in one way or another.
-
-If you're still feeling unclear or shaky about closure, the majority of Book 2, *Scope & Closures* is focused on the topic.
+Will skip it until Book 2, *Scope & Closures* is focused on the topic.
 
 ## `this` Keyword
 
-One of JS's most powerful mechanisms is also one of its most misunderstood: the `this` keyword. One common misconception is that a function's `this` refers to the function itself. Because of how `this` works in other languages, another misconception is that `this` points the instance that a method belongs to. Both are incorrect.
+2 misconception about `this`
 
-As discussed previously, when a function is defined, it is *attached* to its enclosing scope via closure. Scope is the set of rules that controls how references to variables are resolved.
+1. function's `this` refers to the function itself.
+2. `this` points the instance that a method belongs to.
 
-But functions also have another characteristic besides their scope that influences what they can access. This characteristic is best described as an *execution context*, and it's exposed to the function via its `this` keyword.
+- When a function is defined, it is *attached* to its enclosing scope via closure. 
+- Scope is the set of rules that controls how references to variables are resolved.
 
-Scope is static and contains a fixed set of variables available at the moment and location you define a function, but a function's execution *context* is dynamic, entirely dependent on **how it is called** (regardless of where it is defined or even called from).
+functions have another characteristic besides scope best described as an *execution context*, and it's exposed to the function via its `this` keyword.
 
-`this` is not a fixed characteristic of a function based on the function's definition, but rather a dynamic characteristic that's determined each time the function is called.
+so this does not refer to the function itself, not the instance it belongs to but to the function's context.
 
-One way to think about the *execution context* is that it's a tangible object whose properties are made available to a function while it executes. Compare that to scope, which can also be thought of as an *object*; except, the *scope object* is hidden inside the JS engine, it's always the same for that function, and its *properties* take the form of identifier variables available inside the function.
+Scope is static and contains a fixed set of variables available at the moment and location you define a function, 
+but a function's execution *context* is dynamic, entirely dependent on **how it is called** 
+(regardless of where it is defined or even called from).
+
+_makes total sense_
+
+One way to think about the *execution context* is that 
+it's a real object whose properties are made available to a function while it executes. 
+while scope, *object*; except, the *scope object* is hidden inside the JS engine.
 
 ```js
 function classroom(teacher) {
@@ -271,13 +196,14 @@ function classroom(teacher) {
 var assignment = classroom("Kyle");
 ```
 
-The outer `classroom(..)` function makes no reference to a `this` keyword, so it's just like any other function we've seen so far. But the inner `study()` function does reference `this`, which makes it a `this`-aware function. In other words, it's a function that is dependent on its *execution context*.
+- the inner `study()` function does reference `this`, which makes it a `this`-aware function. In other words, it's a function that is dependent on its *execution context*.
 
 | NOTE: |
 | :--- |
 | `study()` is also closed over the `teacher` variable from its outer scope. |
 
-The inner `study()` function returned by `classroom("Kyle")` is assigned to a variable called `assignment`. So how can `assignment()` (aka `study()`) be called?
+The inner `study()` function returned by `classroom("Kyle")` is assigned to a variable called `assignment`. 
+So how can `assignment()` (aka `study()`) be called?
 
 ```js
 assignment();
@@ -286,7 +212,10 @@ assignment();
 
 In this snippet, we call `assignment()` as a plain, normal function, without providing it any *execution context*.
 
-Since this program is not in strict mode (see Chapter 1, "Strictly Speaking"), context-aware functions that are called **without any context specified** default the context to the global object (`window` in the browser). As there is no global variable named `topic` (and thus no such property on the global object), `this.topic` resolves to `undefined`.
+Since this program is not in strict mode (see Chapter 1, "Strictly Speaking"), 
+context-aware functions that are called **without any context specified** 
+default the context to the global object (`window` in the browser). 
+As there is no global variable named `topic` (and thus no such property on the global object), `this.topic` resolves to `undefined`.
 
 Now consider:
 
@@ -317,7 +246,10 @@ A third way to invoke a function is with the `call(..)` method, which takes an o
 
 The same context-aware function invoked three different ways, gives different answers each time for what object `this` will reference.
 
-The benefit of `this`-aware functions—and their dynamic context—is the ability to more flexibly re-use a single function with data from different objects. A function that closes over a scope can never reference a different scope or set of variables. But a function that has dynamic `this` context awareness can be quite helpful for certain tasks.
+The benefit of `this`-aware functions—and their dynamic context—is the ability to more flexibly re-use a single function with data from different objects. 
+
+```A function that closes over a scope can never reference a different scope or set of variables```
+. But a function that has dynamic `this` context awareness can be quite helpful for certain tasks.
 
 ## Prototypes
 
@@ -442,18 +374,8 @@ The two objects `jsHomework` and `mathHomework` each prototype link to the singl
     <br><br>
 </figure>
 
-`jsHomework.study()` delegates to `homework.study()`, but its `this` (`this.topic`) for that execution resolves to `jsHomework` because of how the function is called, so `this.topic` is `"JS"`. Similarly for `mathHomework.study()` delegating to `homework.study()` but still resolving `this` to `mathHomework`, and thus `this.topic` as `"Math"`.
+`jsHomework.study()` delegates to `homework.study()`, but its `this` (`this.topic`) for that execution resolves to `jsHomework` because of how the function is called.
 
 The preceding code snippet would be far less useful if `this` was resolved to `homework`. Yet, in many other languages, it would seem `this` would be `homework` because the `study()` method is indeed defined on `homework`.
 
 Unlike many other languages, JS's `this` being dynamic is a critical component of allowing prototype delegation, and indeed `class`, to work as expected!
-
-## Asking "Why?"
-
-The intended take-away from this chapter is that there's a lot more to JS under the hood than is obvious from glancing at the surface.
-
-As you are *getting started* learning and knowing JS more closely, one of the most important skills you can practice and bolster is curiosity, and the art of asking "Why?" when you encounter something in the language.
-
-Even though this chapter has gone quite deep on some of the topics, many details have still been entirely skimmed over. There's much more to learn here, and the path to that starts with you asking the *right* questions of your code. Asking the right questions is a critical skill of becoming a better developer.
-
-In the final chapter of this book, we're going to briefly look at how JS is divided, as covered across the rest of the *You Don't Know JS Yet* book series. Also, don't skip Appendix B of this book, which has some practice code to review some of the main topics covered in this book.

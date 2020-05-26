@@ -1,33 +1,20 @@
 # You Don't Know JS Yet: Scope & Closures - 2nd Edition
 # Chapter 1: What's the Scope?
 
-By the time you've written your first few programs, you're likely getting somewhat comfortable with creating variables and storing values in them. Working with variables is one of the most foundational things we do in programming!
-
-But you may not have considered very closely the underlying mechanisms used by the engine to organize and manage these variables. I don't mean how the memory is allocated on the computer, but rather: how does JS know which variables are accessible by any given statement, and how does it handle two variables of the same name?
-
-The answers to questions like these take the form of well-defined rules called scope. This book will dig through all aspects of scope—how it works, what it's useful for, gotchas to avoid—and then point toward common scope patterns that guide the structure of programs.
-
 Our first step is to uncover how the JS engine processes our program **before** it runs.
 
 ## About This Book
 
-Welcome to book 2 in the *You Don't Know JS Yet* series! If you already finished *Get Started* (the first book), you're in the right spot! If not, before you proceed I encourage you to *start there* for the best foundation.
+JS is typically classified as an interpreted scripting language, 
+so it's assumed by most that JS programs are processed in a single, top-down pass. 
+But JS is in fact parsed/compiled in a separate phase **before execution begins**. The code author's decisions on where to place variables, functions, and blocks with respect to each other are analyzed according to the rules of scope, during the initial parsing/compilation phase. The resulting scope structure is generally unaffected by runtime conditions.
 
-Our focus will be the first of three pillars in the JS language: the scope system and its function closures, as well as the power of the module design pattern.
-
-JS is typically classified as an interpreted scripting language, so it's assumed by most that JS programs are processed in a single, top-down pass. But JS is in fact parsed/compiled in a separate phase **before execution begins**. The code author's decisions on where to place variables, functions, and blocks with respect to each other are analyzed according to the rules of scope, during the initial parsing/compilation phase. The resulting scope structure is generally unaffected by runtime conditions.
-
-JS functions are themselves first-class values; they can be assigned and passed around just like numbers or strings. But since these functions hold and access variables, they maintain their original scope no matter where in the program the functions are eventually executed. This is called closure.
+JS functions are themselves **first-class values**; they can be assigned and passed around just like numbers or strings. 
+But since these functions hold and access variables, they maintain their original scope no matter where in the program the functions are eventually executed. This is called closure.
 
 Modules are a code organization pattern characterized by public methods that have privileged access (via closure) to hidden variables and functions in the internal scope of the module.
 
 ## Compiled vs. Interpreted
-
-You may have heard of *code compilation* before, but perhaps it seems like a mysterious black box where source code slides in one end and executable programs pop out the other.
-
-It's not mysterious or magical, though. Code compilation is a set of steps that process the text of your code and turn it into a list of instructions the computer can understand. Typically, the whole source code is transformed at once, and those resulting instructions are saved as output (usually in a file) that can later be executed.
-
-You also may have heard that code can be *interpreted*, so how is that different from being *compiled*?
 
 Interpretation performs a similar task to compilation, in that it transforms your program into machine-understandable instructions. But the processing model is different. Unlike a program being compiled all at once, with interpretation the source code is transformed line by line; each line or statement is executed before immediately proceeding to processing the next line of the source code.
 
@@ -51,13 +38,9 @@ Scope is primarily determined during compilation, so understanding how compilati
 
 In classic compiler theory, a program is processed by a compiler in three basic stages:
 
-1. **Tokenizing/Lexing:** breaking up a string of characters into meaningful (to the language) chunks, called tokens. For instance, consider the program: `var a = 2;`. This program would likely be broken up into the following tokens: `var`, `a`, `=`, `2`, and `;`. Whitespace may or may not be persisted as a token, depending on whether it's meaningful or not.
+1. **Tokenizing/Lexing:** 
 
-    (The difference between tokenizing and lexing is subtle and academic, but it centers on whether or not these tokens are identified in a *stateless* or *stateful* way. Put simply, if the tokenizer were to invoke stateful parsing rules to figure out whether `a` should be considered a distinct token or just part of another token, *that* would be **lexing**.)
-
-2. **Parsing:** taking a stream (array) of tokens and turning it into a tree of nested elements, which collectively represent the grammatical structure of the program. This is called an Abstract Syntax Tree (AST).
-
-    For example, the tree for `var a = 2;` might start with a top-level node called `VariableDeclaration`, with a child node called `Identifier` (whose value is `a`), and another child called `AssignmentExpression` which itself has a child called `NumericLiteral` (whose value is `2`).
+2. **Parsing:** from token stream build an Abstract Syntax Tree (AST).
 
 3. **Code Generation:** taking an AST and turning it into executable code. This part varies greatly depending on the language, the platform it's targeting, and other factors.
 
@@ -67,11 +50,13 @@ In classic compiler theory, a program is processed by a compiler in three basic 
 | :--- |
 | The implementation details of a JS engine (utilizing system memory resources, etc.) is much deeper than we will dig here. We'll keep our focus on the observable behavior of our programs and let the JS engine manage those deeper system-level abstractions. |
 
-The JS engine is vastly more complex than *just* these three stages. In the process of parsing and code generation, there are steps to optimize the performance of the execution (i.e., collapsing redundant elements). In fact, code can even be re-compiled and re-optimized during the progression of execution.
-
-So, I'm painting only with broad strokes here. But you'll see shortly why *these* details we *do* cover, even at a high level, are relevant.
+The JS engine is vastly more complex than *just* these three stages. 
+- In the process of parsing and code generation, there are steps to optimize the performance of the execution (i.e., collapsing redundant elements). 
+- code can even be re-compiled and re-optimized during the progression of execution.
 
 JS engines don't have the luxury of an abundance of time to perform their work and optimizations, because JS compilation doesn't happen in a build step ahead of time, as with other languages. It usually must happen in mere microseconds (or less!) right before the code is executed. To ensure the fastest performance under these constraints, JS engines use all kinds of tricks (like JITs, which lazy compile and even hot re-compile); these are well beyond the "scope" of our discussion here.
+
+so why js does not compile AOT ?
 
 ### Required: Two Phases
 
@@ -194,23 +179,30 @@ console.log(nextStudent);
 // Suzy
 ```
 
-Other than declarations, all occurrences of variables/identifiers in a program serve in one of two "roles": either they're the *target* of an assignment or they're the *source* of a value.
+variables in a program serve in one of two "roles": 
+1. Either they're the *target* of an assignment. 
+2. Or they're the *source* of a value.
 
-(When I first learned compiler theory while earning my computer science degree, we were taught the terms "LHS" (aka, *target*) and "RHS" (aka, *source*) for these roles, respectively. As you might guess from the "L" and the "R", the acronyms mean "Left-Hand Side" and "Right-Hand Side", as in left and right sides of an `=` assignment operator. However, assignment targets and sources don't always literally appear on the left or right of an `=`, so it's probably clearer to think in terms of *target* / *source* rather than *left* / *right*.)
+- In CS "LHS" is *target* and "RHS" is the *source* eg: x=5; x is a target assignment 
+- However, assignment targets and sources don't always literally appear on the left or right of an `=`, so it's probably clearer to think in terms of *target* / *source* rather than *left* / *right*.)
 
 How do you know if a variable is a *target*? Check if there is a value that is being assigned to it; if so, it's a *target*. If not, then the variable is a *source*.
 
-For the JS engine to properly handle a program's variables, it must first label each occurrence of a variable as *target* or *source*. We'll dig in now to how each role is determined.
+For the JS engine to properly handle a program's variables, 
+- it must first label each occurrence of a variable as *target* or *source*.
 
 ### Targets
 
 What makes a variable a *target*? Consider:
 
+there are 5 target references
+
 ```js
 students = [ // ..
 ```
 
-This statement is clearly an assignment operation; remember, the `var students` part is handled entirely as a declaration at compile time, and is thus irrelevant during execution; we left it out for clarity and focus. Same with the `nextStudent = getStudentName(73)` statement.
+Remember, the `var students` part is handled entirely as a declaration at compile time, and is thus irrelevant during execution; we left it out for clarity and focus. 
+Same with the `nextStudent = getStudentName(73)` statement.
 
 But there are three other *target* assignment operations in the code that are perhaps less obvious. One of them:
 
@@ -248,11 +240,12 @@ A `function` declaration is a special case of a *target* reference. You can thin
 
 ### Sources
 
-So we've identified all five *target* references in the program. The other variable references must then be *source* references (because that's the only other option!).
+In `for (let student of students)`, we said that `student` is a *target*, but `students` is a *source* reference.
+In the statement `if (student.id == studentID)`, both `student` and `studentID` are *source* references. 
+`student` is also a *source* reference in `return student.name`.
 
-In `for (let student of students)`, we said that `student` is a *target*, but `students` is a *source* reference. In the statement `if (student.id == studentID)`, both `student` and `studentID` are *source* references. `student` is also a *source* reference in `return student.name`.
-
-In `getStudentName(73)`, `getStudentName` is a *source* reference (which we hope resolves to a function reference value). In `console.log(nextStudent)`, `console` is a *source* reference, as is `nextStudent`.
+In `getStudentName(73)`, `getStudentName` is a *source* reference (which we hope resolves to a function reference value).
+ In `console.log(nextStudent)`, `console` is a *source* reference, as is `nextStudent`.
 
 | NOTE: |
 | :--- |

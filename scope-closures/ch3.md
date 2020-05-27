@@ -1,32 +1,16 @@
 # You Don't Know JS Yet: Scope & Closures - 2nd Edition
 # Chapter 3: The Scope Chain
 
-Chapters 1 and 2 laid down a concrete definition of *lexical scope* (and its parts) and illustrated helpful metaphors for its conceptual foundation. Before proceeding with this chapter, find someone else to explain (written or aloud), in your own words, what lexical scope is and why it's useful to understand.
-
-That seems like a step you might skip, but I've found it really does help to take the time to reformulate these ideas as explanations to others. That helps our brains digest what we're learning!
-
-Now it's time to dig into the nuts and bolts, so expect that things will get a lot more detailed from here forward. Stick with it, though, because these discussions really hammer home just how much we all *don't know* about scope, yet. Make sure to take your time with the text and all the code snippets provided.
-
-To refresh the context of our running example, let's recall the color-coded illustration of the nested scope bubbles, from Chapter 2, Figure 2:
+The connections between scopes that are nested within other scopes is called the scope chain, which determines the path along which variables can be accessed. The chain is directed, meaning the lookup moves upward/outward only.
 
 <figure>
     <img src="images/fig2.png" width="500" alt="Colored Scope Bubbles" align="center">
     <figcaption><em>Fig. 2 (Ch. 2): Colored Scope Bubbles</em></figcaption>
 </figure>
 
-The connections between scopes that are nested within other scopes is called the scope chain, which determines the path along which variables can be accessed. The chain is directed, meaning the lookup moves upward/outward only.
-
 ## "Lookup" Is (Mostly) Conceptual
 
-In Figure 2, notice the color of the `students` variable reference in the `for`-loop. How exactly did we determine that it's a RED(1) marble?
-
-In Chapter 2, we described the runtime access of a variable as a "lookup," where the *Engine* has to start by asking the current scope's *Scope Manager* if it knows about an identifier/variable, and proceeding upward/outward back through the chain of nested scopes (toward the global scope) until found, if ever. The lookup stops as soon as the first matching named declaration in a scope bucket is found.
-
-The lookup process thus determined that `students` is a RED(1) marble, because we had not yet found a matching variable name as we traversed the scope chain, until we arrived at the final RED(1) global scope.
-
-Similarly, `studentID` in the `if`-statement is determined to be a BLUE(2) marble.
-
-This suggestion of a runtime lookup process works well for conceptual understanding, but it's not actually how things usually work in practice.
+Look up does not happen in run time but rather in compilation time.
 
 The color of a marble's bucket (aka, meta information of what scope a variable originates from) is *usually determined* during the initial compilation processing. Because lexical scope is pretty much finalized at that point, a marble's color will not change based on anything that can happen later during runtime.
 
@@ -48,45 +32,12 @@ The "Lookup Failures" section in Chapter 2 covers what happens if a marble is ul
 
 ## Shadowing
 
-"Shadowing" might sound mysterious and a little bit sketchy. But don't worry, it's completely legit!
-
-Our running example for these chapters uses different variable names across the scope boundaries. Since they all have unique names, in a way it wouldn't matter if all of them were just stored in one bucket (like RED(1)).
-
-Where having different lexical scope buckets starts to matter more is when you have two or more variables, each in different scopes, with the same lexical names. A single scope cannot have two or more variables with the same name; such multiple references would be assumed as just one variable.
+Having different lexical scope buckets starts to matter more is when you have two or more variables, each in different scopes, with the same lexical names. 
+A single scope cannot have two or more variables with the same name; such multiple references would be assumed as just one variable.
 
 So if you need to maintain two or more variables of the same name, you must use separate (often nested) scopes. And in that case, it's very relevant how the different scope buckets are laid out.
 
-Consider:
-
-```js
-var studentName = "Suzy";
-
-function printStudent(studentName) {
-    studentName = studentName.toUpperCase();
-    console.log(studentName);
-}
-
-printStudent("Frank");
-// FRANK
-
-printStudent(studentName);
-// SUZY
-
-console.log(studentName);
-// Suzy
-```
-
-| TIP: |
-| :--- |
-| Before you move on, take some time to analyze this code using the various techniques/metaphors we've covered in the book. In particular, make sure to identify the marble/bubble colors in this snippet. It's good practice! |
-
-The `studentName` variable on line 1 (the `var studentName = ..` statement) creates a RED(1) marble. The same named variable is declared as a BLUE(2) marble on line 3, the parameter in the `printStudent(..)` function definition.
-
-What color marble will `studentName` be in the `studentName = studentName.toUpperCase()` assignment statement and the `console.log(studentName)` statement? All three `studentName` references will be BLUE(2).
-
-With the conceptual notion of the "lookup," we asserted that it starts with the current scope and works its way outward/upward, stopping as soon as a matching variable is found. The BLUE(2) `studentName` is found right away. The RED(1) `studentName` is never even considered.
-
-This is a key aspect of lexical scope behavior, called *shadowing*. The BLUE(2) `studentName` variable (parameter) shadows the RED(1) `studentName`. So, the parameter is shadowing the (shadowed) global variable. Repeat that sentence to yourself a few times to make sure you have the terminology straight!
+This is a key aspect of lexical scope behavior, called *shadowing*. 
 
 That's why the re-assignment of `studentName` affects only the inner (parameter) variable: the BLUE(2) `studentName`, not the global RED(1) `studentName`.
 
@@ -94,7 +45,7 @@ When you choose to shadow a variable from an outer scope, one direct impact is t
 
 ### Global Unshadowing Trick
 
-Please beware: leveraging the technique I'm about to describe is not very good practice, as it's limited in utility, confusing for readers of your code, and likely to invite bugs to your program. I'm covering it only because you may run across this behavior in existing programs, and understanding what's happening is critical to not getting tripped up.
+To be understood not to be used because it's buggy.
 
 It *is* possible to access a global variable from a scope where that variable has been shadowed, but not through a typical lexical identifier reference.
 
@@ -167,72 +118,9 @@ The global RED(1) `special` is shadowed by the BLUE(2) `special` (parameter), an
 
 ### Copying Is Not Accessing
 
-I've been asked the following "But what about...?" question dozens of times. Consider:
-
-```js
-var special = 42;
-
-function lookingFor(special) {
-    var another = {
-        special: special
-    };
-
-    function keepLooking() {
-        var special = 3.141592;
-        console.log(special);
-        console.log(another.special);  // Ooo, tricky!
-        console.log(window.special);
-    }
-
-    keepLooking();
-}
-
-lookingFor(112358132134);
-// 3.141592
-// 112358132134
-// 42
-```
-
-Oh! So does this `another` object technique disprove my claim that the `special` parameter is "completely inaccessible" from inside `keepLooking()`? No, the claim is still correct.
-
-`special: special` is copying the value of the `special` parameter variable into another container (a property of the same name). Of course, if you put a value in another container, shadowing no longer applies (unless `another` was shadowed, too!). But that doesn't mean we're accessing the parameter `special`; it means we're accessing the copy of the value it had at that moment, by way of *another* container (object property). We cannot reassign the BLUE(2) `special` parameter to a different value from inside `keepLooking()`.
-
-Another "But...!?" you may be about to raise: what if I'd used objects or arrays as the values instead of the numbers (`112358132134`, etc.)? Would us having references to objects instead of copies of primitive values "fix" the inaccessibility?
-
-No. Mutating the contents of the object value via a reference copy is **not** the same thing as lexically accessing the variable itself. We still can't reassign the BLUE(2) `special` parameter.
-
 ### Illegal Shadowing
 
 Not all combinations of declaration shadowing are allowed. `let` can shadow `var`, but `var` cannot shadow `let`:
-
-```js
-function something() {
-    var special = "JavaScript";
-
-    {
-        let special = 42;   // totally fine shadowing
-
-        // ..
-    }
-}
-
-function another() {
-    // ..
-
-    {
-        let special = "JavaScript";
-
-        {
-            var special = "JavaScript";
-            // ^^^ Syntax Error
-
-            // ..
-        }
-    }
-}
-```
-
-Notice in the `another()` function, the inner `var special` declaration is attempting to declare a function-wide `special`, which in and of itself is fine (as shown by the `something()` function).
 
 The syntax error description in this case indicates that `special` has already been defined, but that error message is a little misleading—again, no such error happens in `something()`, as shadowing is generally allowed just fine.
 
